@@ -1,135 +1,219 @@
-import {use, useEffect, useState} from 'react'
-import {View, Text, StyleSheet, ImageBackground, TouchableOpacity, Platform, FlatList } from 'react-native'
-
-import todayImage from '../../assets/img/today.jpg'
-import { FontAwesome } from '@expo/vector-icons'
-import Task from '../components/Task'
-import AddTask from '../components/AddTask'
-
-import moment from 'moment-timezone'
-import 'moment/locale/pt-br'
+import { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ImageBackground,
+  TouchableOpacity,
+  FlatList,
+} from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
+import Task from '../components/Task';
+import AddTask from '../components/AddTask';
+import moment from 'moment-timezone';
+import 'moment/locale/pt-br';
+import { TASK_HEADER_IMAGE } from '../constants/genreImages';
+import { theme } from '../constants/theme';
 
 const taskDB = [
-    {
-        id: Math.random(),
-        desc: 'Ler o livro Fúria Vermelha',
-        estimateAt: new Date(),
-        doneAt: null
-    },
-    {
-        id: Math.random(),
-        desc: 'Caminhar com o cachorro',
-        estimateAt: new Date(),
-        doneAt: null
-    },
-    {
-        id: Math.random(),
-        desc: 'Assistir a série GOT',
-        estimateAt: new Date(),
-        doneAt: null
-    }
-]
+  {
+    id: '1',
+    desc: 'Ler o livro Fúria Vermelha',
+    estimateAt: new Date(),
+    doneAt: null,
+  },
+  {
+    id: '2',
+    desc: 'Caminhar com o cachorro',
+    estimateAt: new Date(),
+    doneAt: null,
+  },
+  {
+    id: '3',
+    desc: 'Assistir a série GOT',
+    estimateAt: new Date(),
+    doneAt: null,
+  },
+];
 
 export default function TaskList() {
-    const [tasks, setTasks] = useState([...taskDB])
-    const [showAddTask, setShowAddTask] = useState(false)
+  const [tasks, setTasks] = useState([...taskDB]);
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [hideDone, setHideDone] = useState(false);
 
-    const today = moment()
-        .tz("America/Sao_Paulo")
-        .locale("pt-br")
-        .format("ddd, D [de] MMMM HH:mm:ss")
+  const today = moment()
+    .tz('America/Sao_Paulo')
+    .locale('pt-br')
+    .format('ddd, D [de] MMMM');
 
-    const toggleTask = (taskId) => {
-        const taskList = [...tasks]
-        taskList.forEach(task => {
-            if(task.id === taskId){
-                task.doneAt = task.doneAt ? null : new Date() 
-            }
-        })
-        setTasks([...taskList])
-    }
+  const toggleTask = (taskId) => {
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId
+          ? { ...task, doneAt: task.doneAt ? null : new Date() }
+          : task
+      )
+    );
+  };
 
-    // useEffect(() => {
-    //     console.warn('tasks atualizado', tasks)
-    // }, [tasks])
+  const deleteTask = (taskId) => {
+    setTasks((prev) => prev.filter((task) => task.id !== taskId));
+  };
 
-    return(
-        <View style={styles.container}>
+  const saveTask = ({ desc, date }) => {
+    const newTask = {
+      id: String(Date.now()),
+      desc,
+      estimateAt: date,
+      doneAt: null,
+    };
+    setTasks((prev) => [newTask, ...prev]);
+    setShowAddTask(false);
+  };
 
-            <AddTask 
-                isVisible={showAddTask}
-                onCancel={() => setShowAddTask(false)}
-                onSave={() => console.warn('salvando a tarefa')}
-            />
+  const visibleTasks = hideDone ? tasks.filter((t) => !t.doneAt) : tasks;
+  const pendingCount = tasks.filter((t) => !t.doneAt).length;
 
-            <ImageBackground source={todayImage} style={styles.background}>
+  return (
+    <View style={styles.container}>
+      <AddTask
+        isVisible={showAddTask}
+        onCancel={() => setShowAddTask(false)}
+        onSave={saveTask}
+      />
 
-                <View style={styles.iconBar}>
-                    <TouchableOpacity>
-                        <FontAwesome name="eye" size={20} color="white" />
-                    </TouchableOpacity>
-                </View>
-                <View style={styles.titleBar}>
-                    <Text style={styles.title}>Hoje</Text>
-                    <Text style={styles.subtitle}>{today}</Text>
-                </View>
-
-            </ImageBackground>
-
-            <View style={styles.taskList}>
-                <FlatList
-                    data={tasks}
-                    keyExtractor={item => `${item.id}`}
-                    renderItem={({item}) => <Task {...item} onToggleTask={toggleTask} />}
-                />
-            </View>
-
+      <ImageBackground source={{ uri: TASK_HEADER_IMAGE }} style={styles.background}>
+        <View style={styles.headerOverlay}>
+          <View style={styles.iconBar}>
             <TouchableOpacity
-                style={styles.addButton}
-                activeOpacity={0.7}
-                onPress={() => setShowAddTask(true)}>
-                    <FontAwesome name='plus' size={20} color={'#fff'} />
+              style={styles.eyeButton}
+              onPress={() => setHideDone((v) => !v)}
+              activeOpacity={0.8}
+            >
+              <FontAwesome
+                name={hideDone ? 'eye-slash' : 'eye'}
+                size={18}
+                color="white"
+              />
+              <Text style={styles.eyeLabel}>
+                {hideDone ? 'Mostrar concluídas' : 'Ocultar concluídas'}
+              </Text>
             </TouchableOpacity>
-
+          </View>
+          <View style={styles.titleBar}>
+            <Text style={styles.title}>Minhas Tarefas</Text>
+            <Text style={styles.subtitle}>{today}</Text>
+            <Text style={styles.counter}>
+              {pendingCount} pendente{pendingCount !== 1 ? 's' : ''}
+            </Text>
+          </View>
         </View>
-    )
+      </ImageBackground>
+
+      <View style={styles.taskList}>
+        <FlatList
+          data={visibleTasks}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <Task
+              {...item}
+              onToggleTask={toggleTask}
+              onDeleteTask={deleteTask}
+            />
+          )}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              {hideDone ? 'Nenhuma tarefa pendente.' : 'Nenhuma tarefa cadastrada.'}
+            </Text>
+          }
+          contentContainerStyle={styles.listContent}
+        />
+      </View>
+
+      <TouchableOpacity
+        style={styles.addButton}
+        activeOpacity={0.85}
+        onPress={() => setShowAddTask(true)}
+      >
+        <FontAwesome name="plus" size={22} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {flex: 1},
-    background: {flex:3},
-    taskList: {flex:7},
-    iconBar: {
-        flexDirection: 'row',
-        marginHorizontal: 20,
-        justifyContent: 'flex-end',
-        marginTop: 48
-    },
-    titleBar: {
-        flex: 1,
-        justifyContent: 'flex-end'
-    },
-    title: {
-        color: 'white',
-        fontSize: 48,
-        marginLeft: 24,
-        marginBottom: 20
-    },
-    subtitle: {
-        color: 'white',
-        fontSize: 24,
-        marginLeft:24,
-        marginBottom: 32
-    },
-    addButton: {
-        position:'absolute',
-        right:30,
-        bottom: 30,
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: '#b13b44',
-        justifyContent: 'center',
-        alignItems: 'center'
-    }
-})
+  container: { flex: 1, backgroundColor: theme.background },
+  background: { height: 220 },
+  headerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 15, 20, 0.6)',
+  },
+  taskList: { flex: 1 },
+  iconBar: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    justifyContent: 'flex-end',
+    marginTop: 16,
+  },
+  eyeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 8,
+  },
+  eyeLabel: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  titleBar: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+  },
+  title: {
+    color: 'white',
+    fontSize: 36,
+    fontWeight: '800',
+  },
+  subtitle: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 16,
+    marginTop: 6,
+  },
+  counter: {
+    color: theme.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 8,
+  },
+  listContent: {
+    paddingBottom: 100,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: theme.textMuted,
+    marginTop: 40,
+    fontSize: 16,
+  },
+  addButton: {
+    position: 'absolute',
+    right: 24,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+});
